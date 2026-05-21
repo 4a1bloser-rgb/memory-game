@@ -273,4 +273,17 @@ html, body {
         width: clamp(40px, 10vw, 75px);
         height: clamp(40px, 10vw, 75px);
     }
+    .top-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .stats {
+        justify-content: center;
+    }
 }
