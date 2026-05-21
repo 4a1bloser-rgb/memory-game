@@ -63,7 +63,7 @@ button:hover, select:hover {
 .stats {
     display: flex;
     gap: 20px;
-    min-width: 320px;
+    min-width: 0;
     justify-content: flex-end;
     flex-shrink: 0;
 }
