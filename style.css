@@ -72,8 +72,12 @@ button:hover, select:hover {
     margin: 0;
     text-align: right;
     white-space: nowrap;
+    font-size: 14px;
 }
-
+.controls,
+.stats {
+    flex-shrink: 1;
+}
 #message {
     text-align: center;
     font-size: 18px;
