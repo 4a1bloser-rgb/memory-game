@@ -166,7 +166,7 @@ function resetGame(){
 
 function renderBoard(size){
     gameBoard.innerHTML="";
-    gameBoard.style.gridTemplateColumns=`repeat(${size},1fr)`;
+    gameBoard.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
 
     cards.forEach(card=>{
         const btn=document.createElement("button");
