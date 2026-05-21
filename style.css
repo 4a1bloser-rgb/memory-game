@@ -19,7 +19,7 @@ body {
     display: block;
     gap: 24px;
     align-items: flex-start;
-    min-height: 100dvh;
+    min-height: auto;
 }
 
 h1 {
