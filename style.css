@@ -94,8 +94,8 @@ button:hover, select:hover {
 
 /* 卡片外框 */
 .card {
-    width: 72px;
-    height: 72px;
+    width: clamp(40px, 10vw, 72px);
+    height: clamp(40px, 10vw, 72px);
     position: relative;
     perspective: 1000px;
     border: none;
