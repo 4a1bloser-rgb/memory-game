@@ -2,7 +2,7 @@ body {
     margin: 0;
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #74c69d, #95d5b2, #ffd166, #ef476f);
-    min-height: 100vh;
+    min-height: 100dvh;
     display: block;
     align-items: center;
 }
@@ -19,6 +19,7 @@ body {
     display: block;
     gap: 24px;
     align-items: flex-start;
+    min-height: 100dvh;
 }
 
 h1 {
@@ -198,6 +199,7 @@ button:hover, select:hover {
     gap: 20px;
     justify-content: center;
     align-items: flex-start;
+    width: 100%;
 }
 .current-score {
     background: #fff3bf;
