@@ -15,8 +15,11 @@ def load_data():
     if not os.path.exists(DATA_FILE):
         return {}
 
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
 
 
 # =========================
@@ -44,7 +47,7 @@ def get_leaderboard(size):
 
     size = str(size)
 
-    if size not in data:
+    if size not in data or not isinstance(data[size], list):
         data[size] = []
 
     return jsonify(data[size])
@@ -55,7 +58,7 @@ def get_leaderboard(size):
 # =========================
 @app.route("/api/leaderboard", methods=["POST"])
 def add_score():
-    new_score = request.json
+    new_score = request.get_json()
 
     size = str(new_score["size"])
 
