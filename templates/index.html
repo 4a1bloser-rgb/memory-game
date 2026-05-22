@@ -290,6 +290,7 @@ async function renderLeaderboard(){
                 <span>#${i+1}</span>
                 <span>${item.timeMs.toFixed(3)}s / ${item.moves}步</span>
                 <span>${item.deviceId?.slice(0,8) || "?"}</span>
+                <span>${item.date}</span>
             </div>`;
         }).join("")}
     `;
