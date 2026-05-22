@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>記憶翻牌遊戲</title>
-    <link rel="stylesheet" href="static\style.css">
+    <link rel="stylesheet" href="static/style.css">
 </head>
 
 <body>
@@ -13,6 +13,9 @@
 <div id="start-screen" class="overlay">
     <div class="panel">
         <h2>記憶翻牌遊戲</h2>
+
+        <!-- ⭐顯示裝置ID -->
+        <p id="device-text">載入中...</p>
 
         <label>選擇難度</label><br><br>
         <select id="start-difficulty">
@@ -51,8 +54,7 @@
         </div>
 
         <div class="stats">
-            <!-- ⭐改成毫秒 -->
-            <p>⏱ 時間：<span id="timer">0</span> ms</p>
+            <p>⏱ 時間：<span id="timer">0.000</span> 秒</p>
             <p>🎯 翻牌次數：<span id="moves">0</span></p>
         </div>
     </div>
@@ -77,16 +79,16 @@ const timerDisplay = document.getElementById("timer");
 const movesDisplay = document.getElementById("moves");
 const message = document.getElementById("message");
 
-// ⭐畫面
 const startScreen = document.getElementById("start-screen");
 const endScreen = document.getElementById("end-screen");
 const startBtn = document.getElementById("start-btn");
 const startDifficulty = document.getElementById("start-difficulty");
 const finalText = document.getElementById("final-text");
-const restartEndBtn = document.getElementById("restart-end");
+
+const deviceText = document.getElementById("device-text");
 
 // =====================
-// ⭐ DEVICE ID（新增）
+// DEVICE ID
 // =====================
 function getDeviceId(){
     let id = localStorage.getItem("deviceId");
@@ -97,47 +99,42 @@ function getDeviceId(){
     return id;
 }
 
+// 顯示ID
+deviceText.textContent = "你是 #" + getDeviceId().slice(0,8);
+
 // =====================
-// state
+// STATE
 // =====================
 let cards = [];
 let flippedCards = [];
 let moves = 0;
 
-// ⭐改：毫秒級
 let startTime = 0;
 let timer;
 let gameStarted = false;
 let lastScoreId = null;
 
 // =====================
-// sound
+// TIMER（毫秒）
 // =====================
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function startTimer(){
+    startTime = performance.now();
 
-function playSound(type) {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    timer = setInterval(()=>{
+        const ms = (performance.now() - startTime) / 1000;
+        timerDisplay.textContent = ms.toFixed(3);
+    }, 50);
+}
 
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    if (type === "flip") osc.frequency.value = 600;
-    else if (type === "match") osc.frequency.value = 300;
-    else if (type === "win") osc.frequency.value = 800;
-
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.2);
+function stopTimer(){
+    clearInterval(timer);
 }
 
 // =====================
-// game logic
+// GAME
 // =====================
-function shuffle(array){
-    return [...array].sort(()=>Math.random()-0.5);
+function shuffle(a){
+    return [...a].sort(()=>Math.random()-0.5);
 }
 
 function generateCards(size){
@@ -150,37 +147,17 @@ function generateCards(size){
     }));
 }
 
-// =====================
-// ⭐毫秒計時（修改）
-// =====================
-function startTimer(){
-    startTime = Date.now();
-
-    timer = setInterval(()=>{
-        const ms = Date.now() - startTime;
-        timerDisplay.textContent = ms;
-    },10);
-}
-
-function stopTimer(){
-    clearInterval(timer);
-}
-
 function resetGame(){
     const size=parseInt(difficultySelect.value);
 
     cards=generateCards(size);
     flippedCards=[];
     moves=0;
-
-    // ⭐改
-    startTime = 0;
-
     gameStarted=false;
     lastScoreId=null;
 
+    timerDisplay.textContent="0.000";
     movesDisplay.textContent=0;
-    timerDisplay.textContent=0;
     message.textContent="";
 
     stopTimer();
@@ -219,8 +196,6 @@ function handle(id){
         startTimer();
     }
 
-    playSound("flip");
-
     card.flipped=true;
     flippedCards.push(card);
 
@@ -233,7 +208,6 @@ function handle(id){
         const[a,b]=flippedCards;
 
         if(a.value===b.value){
-            playSound("match");
             a.matched=b.matched=true;
             flippedCards=[];
             checkWin();
@@ -255,11 +229,12 @@ async function checkWin(){
     if(cards.every(c=>c.matched)){
         stopTimer();
 
-        const timeMs = Date.now() - startTime;
+        const timeMs = (performance.now() - startTime)/1000;
 
-        finalText.textContent=`恭喜完成！用了 ${timeMs} ms，翻牌 ${moves} 次！`;
+        finalText.textContent =
+        `完成！ ${timeMs.toFixed(3)} 秒 / ${moves} 步`;
+
         endScreen.classList.remove("hidden");
-        playSound("win");
 
         lastScoreId = await saveScore(timeMs,moves,parseInt(difficultySelect.value));
         await renderLeaderboard();
@@ -269,20 +244,17 @@ async function checkWin(){
 // =====================
 // API
 // =====================
-
-// ⭐讀排行榜
 async function getLeaderboard(size){
     const res = await fetch(`/api/leaderboard/${size}`);
     return await res.json();
 }
 
-// ⭐存分數（加 deviceId + ms）
 async function saveScore(timeMs,moves,size){
 
     const newScore = {
         id: Date.now(),
-        deviceId: getDeviceId(),   // ⭐新增
-        timeMs,                    // ⭐毫秒
+        deviceId: getDeviceId(),
+        timeMs,
         moves,
         size,
         date: new Date().toLocaleString()
@@ -290,9 +262,7 @@ async function saveScore(timeMs,moves,size){
 
     await fetch("/api/leaderboard",{
         method:"POST",
-        headers:{
-            "Content-Type":"application/json"
-        },
+        headers:{ "Content-Type":"application/json" },
         body:JSON.stringify(newScore)
     });
 
@@ -318,13 +288,15 @@ async function renderLeaderboard(){
             return `
             <div class="leaderboard-item ${isCurrent?'current-score':''}">
                 <span>#${i+1}</span>
-                <span>${item.timeMs}ms / ${item.moves}步</span>
-                <span>${item.date}</span>
+                <span>${item.timeMs.toFixed(3)}s / ${item.moves}步</span>
+                <span>${item.deviceId?.slice(0,8) || "?"}</span>
             </div>`;
         }).join("")}
     `;
 }
 
+// =====================
+// EVENTS
 // =====================
 startBtn.onclick=()=>{
     difficultySelect.value=startDifficulty.value;
@@ -333,13 +305,15 @@ startBtn.onclick=()=>{
 };
 
 restartBtn.onclick=resetGame;
-restartEndBtn.onclick=()=>{
+
+document.getElementById("restart-end").onclick=()=>{
     endScreen.classList.add("hidden");
     resetGame();
 };
 
 difficultySelect.onchange=resetGame;
 
+// init
 renderLeaderboard();
 
 </script>

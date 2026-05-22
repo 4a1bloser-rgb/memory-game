@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-import json
-import os
+import json, os
 
 app = Flask(__name__)
 
@@ -27,7 +26,7 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/api/leaderboard/<size>", methods=["GET"])
+@app.route("/api/leaderboard/<size>")
 def get_leaderboard(size):
     data = load_data()
     size = str(size)
@@ -48,16 +47,16 @@ def add_score():
     if size not in data:
         data[size] = []
 
-    # ⭐支援毫秒排序
     data[size].append(new_score)
 
-    data[size].sort(key=lambda x: (x.get("timeMs", 999999999), x["moves"]))
+    # ⭐毫秒排序
+    data[size].sort(key=lambda x: (x.get("timeMs", 999999), x["moves"]))
 
     data[size] = data[size][:10]
 
     save_data(data)
 
-    return jsonify({"success": True})
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
