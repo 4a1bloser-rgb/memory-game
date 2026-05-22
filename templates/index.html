@@ -8,6 +8,7 @@
 </head>
 
 <body>
+
 <!-- ⭐開始畫面 -->
 <div id="start-screen" class="overlay">
     <div class="panel">
@@ -64,6 +65,7 @@
 </div>
 
 <script>
+
 // =====================
 // DOM
 // =====================
@@ -74,14 +76,13 @@ const timerDisplay = document.getElementById("timer");
 const movesDisplay = document.getElementById("moves");
 const message = document.getElementById("message");
 
-// ⭐開始/結束畫面
+// ⭐畫面
 const startScreen = document.getElementById("start-screen");
 const endScreen = document.getElementById("end-screen");
 const startBtn = document.getElementById("start-btn");
 const startDifficulty = document.getElementById("start-difficulty");
 const finalText = document.getElementById("final-text");
 const restartEndBtn = document.getElementById("restart-end");
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 // =====================
 // state
@@ -95,8 +96,10 @@ let gameStarted = false;
 let lastScoreId = null;
 
 // =====================
-// function
+// sound
 // =====================
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
 function playSound(type) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -104,13 +107,9 @@ function playSound(type) {
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    if (type === "flip") {
-        osc.frequency.value = 600;
-    } else if (type === "match") {
-        osc.frequency.value = 300;
-    } else if (type === "win") {
-        osc.frequency.value = 800;
-    }
+    if (type === "flip") osc.frequency.value = 600;
+    else if (type === "match") osc.frequency.value = 300;
+    else if (type === "win") osc.frequency.value = 800;
 
     gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
@@ -118,6 +117,10 @@ function playSound(type) {
     osc.start();
     osc.stop(audioCtx.currentTime + 0.2);
 }
+
+// =====================
+// game logic
+// =====================
 function shuffle(array){
     return [...array].sort(()=>Math.random()-0.5);
 }
@@ -161,7 +164,7 @@ function resetGame(){
     renderBoard(size);
     renderLeaderboard();
 
-    endScreen.classList.add("hidden"); // ⭐關掉結束畫面
+    endScreen.classList.add("hidden");
 }
 
 function renderBoard(size){
@@ -192,7 +195,9 @@ function handle(id){
         gameStarted=true;
         startTimer();
     }
+
     playSound("flip");
+
     card.flipped=true;
     flippedCards.push(card);
 
@@ -221,64 +226,73 @@ function handle(id){
 }
 
 // =====================
-// win + score
+// WIN
 // =====================
-function checkWin(){
+async function checkWin(){
     if(cards.every(c=>c.matched)){
         stopTimer();
 
         finalText.textContent=`恭喜完成！用了 ${seconds} 秒，翻牌 ${moves} 次！`;
         endScreen.classList.remove("hidden");
         playSound("win");
-        lastScoreId=saveScore(seconds,moves,parseInt(difficultySelect.value));
-        renderLeaderboard();
+
+        lastScoreId = await saveScore(seconds,moves,parseInt(difficultySelect.value));
+        await renderLeaderboard();
     }
 }
 
-function getLeaderboard(size){
-    const key=`lb_${size}`;
-    return JSON.parse(localStorage.getItem(key)||"[]");
+// =====================
+// 🔥 Flask API（已取代 localStorage）
+// =====================
+
+// ⭐讀排行榜
+async function getLeaderboard(size){
+    const res = await fetch(`/leaderboard/${size}`);
+    return await res.json();
 }
 
-function saveScore(seconds,moves,size){
-    const key=`lb_${size}`;
-    const data=getLeaderboard(size);
+// ⭐存分數
+async function saveScore(seconds,moves,size){
 
-    const newScore={
-        id:Date.now(),
+    const newScore = {
+        id: Date.now(),
         seconds,
         moves,
         size,
-        date:new Date().toLocaleString()
+        date: new Date().toLocaleString()
     };
 
-    data.push(newScore);
-    data.sort((a,b)=>a.seconds-b.seconds||a.moves-b.moves);
-
-    localStorage.setItem(key,JSON.stringify(data.slice(0,10)));
+    await fetch("/leaderboard",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify(newScore)
+    });
 
     return newScore.id;
 }
 
-function renderLeaderboard(){
+// ⭐畫排行榜
+async function renderLeaderboard(){
     const size=parseInt(difficultySelect.value);
     const board=document.getElementById("leaderboard");
-    const data=getLeaderboard(size);
-    
-    if (data.length === 0) {
-        board.innerHTML = `
-            <h2>🏆 ${size}×${size} 排行榜</h2>
-            <p>還沒有紀錄</p>
-        `;
+
+    const data=await getLeaderboard(size);
+
+    if(!data.length){
+        board.innerHTML=`<h2>🏆 ${size}×${size}</h2><p>還沒有紀錄</p>`;
         return;
     }
+
     board.innerHTML=`
-        <h2>🏆 ${size}×${size} 排行榜</h2>
+        <h2>🏆 ${size}×${size}</h2>
         ${data.map((item,i)=>{
             const isCurrent=item.id===lastScoreId;
+
             return `
             <div class="leaderboard-item ${isCurrent?'current-score':''}">
-                <span>#${i + 1}</span>
+                <span>#${i+1}</span>
                 <span>${item.seconds}s / ${item.moves}步</span>
                 <span>${item.date}</span>
             </div>`;
@@ -289,30 +303,26 @@ function renderLeaderboard(){
 // =====================
 // events
 // =====================
-
-// ⭐開始遊戲
 startBtn.onclick=()=>{
     difficultySelect.value=startDifficulty.value;
     startScreen.classList.add("hidden");
     resetGame();
 };
 
-// ⭐主按鈕
 restartBtn.onclick=resetGame;
 
-// ⭐結束再玩
 restartEndBtn.onclick=()=>{
     endScreen.classList.add("hidden");
     resetGame();
 };
 
-// ⭐切換難度
 difficultySelect.onchange=resetGame;
 
 // =====================
 // init
 // =====================
 renderLeaderboard();
+
 </script>
 </body>
 </html>
