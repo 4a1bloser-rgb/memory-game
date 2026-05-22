@@ -247,7 +247,7 @@ async function checkWin(){
 
 // ⭐讀排行榜
 async function getLeaderboard(size){
-    const res = await fetch(`/leaderboard/${size}`);
+    const res = await fetch(`/api/leaderboard/${size}`);
     return await res.json();
 }
 
@@ -262,7 +262,7 @@ async function saveScore(seconds,moves,size){
         date: new Date().toLocaleString()
     };
 
-    await fetch("/leaderboard",{
+    await fetch("/api/leaderboard",{
         method:"POST",
         headers:{
             "Content-Type":"application/json"
