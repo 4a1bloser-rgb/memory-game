@@ -51,7 +51,8 @@
         </div>
 
         <div class="stats">
-            <p>⏱ 時間：<span id="timer">0</span> 秒</p>
+            <!-- ⭐改成毫秒 -->
+            <p>⏱ 時間：<span id="timer">0</span> ms</p>
             <p>🎯 翻牌次數：<span id="moves">0</span></p>
         </div>
     </div>
@@ -85,12 +86,26 @@ const finalText = document.getElementById("final-text");
 const restartEndBtn = document.getElementById("restart-end");
 
 // =====================
+// ⭐ DEVICE ID（新增）
+// =====================
+function getDeviceId(){
+    let id = localStorage.getItem("deviceId");
+    if(!id){
+        id = crypto.randomUUID();
+        localStorage.setItem("deviceId", id);
+    }
+    return id;
+}
+
+// =====================
 // state
 // =====================
 let cards = [];
 let flippedCards = [];
 let moves = 0;
-let seconds = 0;
+
+// ⭐改：毫秒級
+let startTime = 0;
 let timer;
 let gameStarted = false;
 let lastScoreId = null;
@@ -135,11 +150,16 @@ function generateCards(size){
     }));
 }
 
+// =====================
+// ⭐毫秒計時（修改）
+// =====================
 function startTimer(){
-    timer=setInterval(()=>{
-        seconds++;
-        timerDisplay.textContent=seconds;
-    },1000);
+    startTime = Date.now();
+
+    timer = setInterval(()=>{
+        const ms = Date.now() - startTime;
+        timerDisplay.textContent = ms;
+    },10);
 }
 
 function stopTimer(){
@@ -152,7 +172,10 @@ function resetGame(){
     cards=generateCards(size);
     flippedCards=[];
     moves=0;
-    seconds=0;
+
+    // ⭐改
+    startTime = 0;
+
     gameStarted=false;
     lastScoreId=null;
 
@@ -232,17 +255,19 @@ async function checkWin(){
     if(cards.every(c=>c.matched)){
         stopTimer();
 
-        finalText.textContent=`恭喜完成！用了 ${seconds} 秒，翻牌 ${moves} 次！`;
+        const timeMs = Date.now() - startTime;
+
+        finalText.textContent=`恭喜完成！用了 ${timeMs} ms，翻牌 ${moves} 次！`;
         endScreen.classList.remove("hidden");
         playSound("win");
 
-        lastScoreId = await saveScore(seconds,moves,parseInt(difficultySelect.value));
+        lastScoreId = await saveScore(timeMs,moves,parseInt(difficultySelect.value));
         await renderLeaderboard();
     }
 }
 
 // =====================
-// 🔥 Flask API（已取代 localStorage）
+// API
 // =====================
 
 // ⭐讀排行榜
@@ -251,12 +276,13 @@ async function getLeaderboard(size){
     return await res.json();
 }
 
-// ⭐存分數
-async function saveScore(seconds,moves,size){
+// ⭐存分數（加 deviceId + ms）
+async function saveScore(timeMs,moves,size){
 
     const newScore = {
         id: Date.now(),
-        seconds,
+        deviceId: getDeviceId(),   // ⭐新增
+        timeMs,                    // ⭐毫秒
         moves,
         size,
         date: new Date().toLocaleString()
@@ -273,7 +299,6 @@ async function saveScore(seconds,moves,size){
     return newScore.id;
 }
 
-// ⭐畫排行榜
 async function renderLeaderboard(){
     const size=parseInt(difficultySelect.value);
     const board=document.getElementById("leaderboard");
@@ -293,15 +318,13 @@ async function renderLeaderboard(){
             return `
             <div class="leaderboard-item ${isCurrent?'current-score':''}">
                 <span>#${i+1}</span>
-                <span>${item.seconds}s / ${item.moves}步</span>
+                <span>${item.timeMs}ms / ${item.moves}步</span>
                 <span>${item.date}</span>
             </div>`;
         }).join("")}
     `;
 }
 
-// =====================
-// events
 // =====================
 startBtn.onclick=()=>{
     difficultySelect.value=startDifficulty.value;
@@ -310,7 +333,6 @@ startBtn.onclick=()=>{
 };
 
 restartBtn.onclick=resetGame;
-
 restartEndBtn.onclick=()=>{
     endScreen.classList.add("hidden");
     resetGame();
@@ -318,9 +340,6 @@ restartEndBtn.onclick=()=>{
 
 difficultySelect.onchange=resetGame;
 
-// =====================
-// init
-// =====================
 renderLeaderboard();
 
 </script>
